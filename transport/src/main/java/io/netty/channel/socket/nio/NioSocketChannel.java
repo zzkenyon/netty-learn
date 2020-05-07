@@ -75,6 +75,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private final SocketChannelConfig config;
 
     /**
+     * 关键代码
      * Create a new instance
      */
     public NioSocketChannel() {
@@ -85,6 +86,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioSocketChannel(SelectorProvider provider) {
+        // 关键点 调用nio api 创建SocketChannel
         this(newSocket(provider));
     }
 

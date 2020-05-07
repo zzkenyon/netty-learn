@@ -46,12 +46,14 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     /**
+     * 线程数为0 则设为默认线程数，核数*2
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)
+     * args 包含子类传过来的诸多参数 provider、selectStrategy、RejectHandler
      */
     protected MultithreadEventLoopGroup(int nThreads, Executor executor, Object... args) {
+        // 更改线程数后继续构造父类
         super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, args);
     }
-
     /**
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
      */
@@ -60,6 +62,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     /**
+     *
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor,
      * EventExecutorChooserFactory, Object...)
      */
