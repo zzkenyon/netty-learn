@@ -50,9 +50,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * 对应一个reactor线程，每个NioEventLoop可以理解成一个nio线程，用于轮询处理多个channel上的事件
  * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
- *  NioEventLoop 是一个单线程的事件循环
  */
 
 public final class NioEventLoop extends SingleThreadEventLoop {
@@ -432,29 +432,40 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * run方法是reactor线程的主体，在第一次添加任务的时候被启动
+     * 主要流程就是 select --> process selected keys  --> run tasks
+     */
     @Override
     protected void run() {
         int selectCnt = 0;
+        // 无限循环，该线程会一直运行
         for (;;) {
             try {
                 int strategy;
                 try {
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
+                    // hasTask 时continue
                     case SelectStrategy.CONTINUE:
                         continue;
 
+                    // 由于NIO不支持忙碌等待，因此要选择跳过
                     case SelectStrategy.BUSY_WAIT:
-                        // fall-through to SELECT since the busy-wait is not supported with NIO
 
+                    // 当没有可调度任务时 strategy = SelectStrategy.SELECT
                     case SelectStrategy.SELECT:
+                        // 获取现在到下一个计划任务调度执行之间的时间，没有计划任务返回-1
                         long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
                         if (curDeadlineNanos == -1L) {
-                            curDeadlineNanos = NONE; // nothing on the calendar
+                            //NONE 是Integer.maxValue
+                            curDeadlineNanos = NONE;
                         }
+                        // 设定原子量
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
                             if (!hasTasks()) {
+                                //如果任务队列中没有可调度任务 执行selector.select(curDeadlineNanos)
                                 strategy = select(curDeadlineNanos);
                             }
                         } finally {
@@ -473,18 +484,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     handleLoopException(e);
                     continue;
                 }
-
+                // select计数器+1
                 selectCnt++;
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
+                // io时间所占比例，初始值为50
                 final int ioRatio = this.ioRatio;
                 boolean ranTasks;
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
+                            // 就绪数量大于0，处理selectedKeys
                             processSelectedKeys();
                         }
                     } finally {
+                        // io时间占比达到100% 将一直执行runAllTasks
                         // Ensure we always run tasks.
                         ranTasks = runAllTasks();
                     }
@@ -493,8 +507,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     try {
                         processSelectedKeys();
                     } finally {
-                        // Ensure we always run tasks.
                         final long ioTime = System.nanoTime() - ioStartTime;
+                        // 运行runAllTasks时间与上面处理io时间一致
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
@@ -574,8 +588,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKeys() {
         if (selectedKeys != null) {
+            // 优化过的处理 一般会进这里
             processSelectedKeysOptimized();
         } else {
+            // 正常处理
             processSelectedKeysPlain(selector.selectedKeys());
         }
     }
@@ -656,16 +672,23 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             if (needsToSelectAgain) {
+                //连接取消个数达到256，needsToSelectAgain = true
                 // null out entries in the array to allow to have it GC'ed once the Channel close
                 // See https://github.com/netty/netty/issues/2363
+                // reset将selectedKeys中未处理的所有key手动置空
                 selectedKeys.reset(i + 1);
-
+                //重新select
                 selectAgain();
                 i = -1;
             }
         }
     }
 
+    /**
+     * 处理逻辑
+     * @param k
+     * @param ch
+     */
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {

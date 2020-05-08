@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode {
     private static final long START_TIME = System.nanoTime();
-
+    // 获取当前时间 和 ScheduledFutureTask 加载时间的 差值
     static long nanoTime() {
         return System.nanoTime() - START_TIME;
     }
@@ -108,6 +108,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     void setConsumed() {
         // Optimization to avoid checking system clock again
         // after deadline has passed and task has been dequeued
+        // 如果只执行一次
         if (periodNanos == 0) {
             assert nanoTime() >= deadlineNanos;
             deadlineNanos = 0L;

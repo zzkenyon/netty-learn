@@ -396,6 +396,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
     }
 
+    /**
+     * 将selector上注册过的channel取消掉
+     * @throws Exception
+     */
     @Override
     protected void doDeregister() throws Exception {
         eventLoop().cancel(selectionKey());
