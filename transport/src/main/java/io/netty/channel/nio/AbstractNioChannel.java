@@ -378,7 +378,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
-                // 关键点 注册
+                // 关键点 注册通道到selector
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
@@ -397,7 +397,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     /**
-     * 将selector上注册过的channel取消掉
+     * 将selector上注册过的channel取消掉，断开连接
      * @throws Exception
      */
     @Override

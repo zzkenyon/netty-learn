@@ -844,7 +844,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param immediate 是否立即执行
      */
     private void execute(Runnable task, boolean immediate) {
-        //当前线程是否在EventLoop中执行
+        //判断当前执行线程是否是成员thread持有的线程对象
         boolean inEventLoop = inEventLoop();
         //将task加入任务队列
         addTask(task);

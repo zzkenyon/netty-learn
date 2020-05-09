@@ -455,7 +455,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                     // 当没有可调度任务时 strategy = SelectStrategy.SELECT
                     case SelectStrategy.SELECT:
-                        // 获取现在到下一个计划任务调度执行之间的时间，没有计划任务返回-1
+                        // 获取现在到下一个计划任务调度执行之间的时间，没有定时任务返回-1
                         long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
                         if (curDeadlineNanos == -1L) {
                             //NONE 是Integer.maxValue
@@ -494,11 +494,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
-                            // 就绪数量大于0，处理selectedKeys
+                            // 就绪数量大于0，处理selectedKeys，这里的处理属于io处理
                             processSelectedKeys();
                         }
                     } finally {
-                        // io时间占比达到100% 将一直执行runAllTasks
+                        // io时间占比达到100% 将一直执行runAllTasks 这里的处理属于cpu处理
                         // Ensure we always run tasks.
                         ranTasks = runAllTasks();
                     }
@@ -508,7 +508,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         processSelectedKeys();
                     } finally {
                         final long ioTime = System.nanoTime() - ioStartTime;
-                        // 运行runAllTasks时间与上面处理io时间一致
+                        // 由于ioRatio = 50 所以运行runAllTasks时间与上面处理io时间一致
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
@@ -587,6 +587,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
+        //这里做的优化，主要是使用netty 自定义的selectedKeys对象 通过反射的方式替换掉jdk原生selector中的 selectedKeySet字段属性
+        // 自定义的keyset 使用数组存放selectedKeys，原生的使用HashSet，主要优化的是检索性能
+        // 替换过程 见本类的openSelector方法
         if (selectedKeys != null) {
             // 优化过的处理 一般会进这里
             processSelectedKeysOptimized();
@@ -659,6 +662,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             final SelectionKey k = selectedKeys.keys[i];
             // null out entry in the array to allow to have it GC'ed once the Channel close
             // See https://github.com/netty/netty/issues/2363
+            // 手动置空 gc
             selectedKeys.keys[i] = null;
 
             final Object a = k.attachment();
@@ -670,11 +674,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
                 processSelectedKey(k, task);
             }
-
+            // needsToSelectAgain 默认为false 在本类的cancel方法中，当连接取消次数达到256 被设置为true
+            // cancel方法 最终是在 AbstractNioChannel 类的 doDeregister 方法中被调用，调用一次取消连接数+1
             if (needsToSelectAgain) {
-                //连接取消个数达到256，needsToSelectAgain = true
-                // null out entries in the array to allow to have it GC'ed once the Channel close
-                // See https://github.com/netty/netty/issues/2363
                 // reset将selectedKeys中未处理的所有key手动置空
                 selectedKeys.reset(i + 1);
                 //重新select
