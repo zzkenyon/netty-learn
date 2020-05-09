@@ -32,6 +32,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
     /**
+     * channel 被激活的时候调用
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active
      */
     void channelActive(ChannelHandlerContext ctx) throws Exception;
@@ -43,6 +44,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
     /**
+     * 当前channel从其他InBoundHandler 读取到message时调用
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
     void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
@@ -56,7 +58,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Gets called if an user event was triggered.
+     * 在用户事件被触发时调用
      */
     void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 

@@ -46,7 +46,9 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
-
+    /**
+     * HEAD_NAME = HeadContext#0
+     */
     private static final String HEAD_NAME = generateName0(HeadContext.class);
     private static final String TAIL_NAME = generateName0(TailContext.class);
 
@@ -64,9 +66,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
+    /**
+     * pipeline持有channel引用
+     */
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
+
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
@@ -117,6 +123,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+        //group为null，因此childExecutor(group)也返回null
         return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
     }
 
@@ -199,10 +206,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            //1 检查是否重复添加
             checkMultiplicity(handler);
-
+            //2 创建节点
             newCtx = newContext(group, filterName(name, handler), handler);
-
+            //3 添加节点
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -220,6 +228,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return this;
             }
         }
+        //4 回调用户方法
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -277,6 +286,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ctx.prev = newCtx;
     }
 
+    /**
+     * 这个函数用于给handler创建一个唯一性的名字
+     * netty创建默认name的规则为 简单类名#0
+     * @param name
+     * @param handler
+     * @return
+     */
     private String filterName(String name, ChannelHandler handler) {
         if (name == null) {
             return generateName(handler);
@@ -385,9 +401,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private String generateName(ChannelHandler handler) {
+        // 先查看缓存中是否有生成过默认name
         Map<Class<?>, String> cache = nameCaches.get();
         Class<?> handlerType = handler.getClass();
         String name = cache.get(handlerType);
+        // 没有生成过，就生成一个默认name，加入缓存
         if (name == null) {
             name = generateName0(handlerType);
             cache.put(handlerType, name);
@@ -395,6 +413,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         // It's not very likely for a user to put more than one handler of the same type, but make sure to avoid
         // any name conflicts.  Note that we don't cache the names generated here.
+        // 生成完了，还要看默认name有没有冲突
         if (context0(name) != null) {
             String baseName = name.substring(0, name.length() - 1); // Strip the trailing '0'.
             for (int i = 1;; i ++) {
@@ -595,6 +614,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static void checkMultiplicity(ChannelHandler handler) {
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
+            // netty 使用成员变量added标记节点是否被添加
+            // 如果该Handler是共享的 且 已被添加 则 抛异常
+            // 由此可见，一个Handler如果是sharable的，就可以无限次被添加到pipeline中，我们客户端代码如果要让一个Handler被共用，
+            // 只需要加一个@Sharable注解即可
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +
@@ -916,6 +939,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
+        // 最先调用的是head节点的channelRead方法
         AbstractChannelHandlerContext.invokeChannelRead(head, msg);
         return this;
     }
@@ -1020,6 +1044,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return tail.writeAndFlush(msg, promise);
     }
 
+    //可以看出来是从tail 开始传播outBound
     @Override
     public final ChannelFuture writeAndFlush(Object msg) {
         return tail.writeAndFlush(msg);
@@ -1413,7 +1438,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.fireChannelReadComplete();
-
             readIfIsAutoRead();
         }
 

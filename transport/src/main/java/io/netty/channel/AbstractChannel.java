@@ -292,6 +292,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.write(msg, promise);
     }
 
+    // outBound事件发源地
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
         return pipeline.writeAndFlush(msg);

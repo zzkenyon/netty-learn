@@ -37,29 +37,45 @@ final class ChannelHandlerMask {
 
     // Using to mask which methods must be called for a ChannelHandler.
     static final int MASK_EXCEPTION_CAUGHT = 1;
-    static final int MASK_CHANNEL_REGISTERED = 1 << 1;
-    static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
-    static final int MASK_CHANNEL_ACTIVE = 1 << 3;
-    static final int MASK_CHANNEL_INACTIVE = 1 << 4;
-    static final int MASK_CHANNEL_READ = 1 << 5;
-    static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6;
-    static final int MASK_USER_EVENT_TRIGGERED = 1 << 7;
-    static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8;
-    static final int MASK_BIND = 1 << 9;
-    static final int MASK_CONNECT = 1 << 10;
-    static final int MASK_DISCONNECT = 1 << 11;
-    static final int MASK_CLOSE = 1 << 12;
-    static final int MASK_DEREGISTER = 1 << 13;
-    static final int MASK_READ = 1 << 14;
-    static final int MASK_WRITE = 1 << 15;
-    static final int MASK_FLUSH = 1 << 16;
 
+    static final int MASK_CHANNEL_REGISTERED = 1 << 1; //2
+    static final int MASK_CHANNEL_UNREGISTERED = 1 << 2; //4
+    static final int MASK_CHANNEL_ACTIVE = 1 << 3; //8
+    static final int MASK_CHANNEL_INACTIVE = 1 << 4; //16
+    static final int MASK_CHANNEL_READ = 1 << 5; //32
+    static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6; //64
+    static final int MASK_USER_EVENT_TRIGGERED = 1 << 7; //128
+    static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8; //256
+
+    static final int MASK_BIND = 1 << 9; //512
+    static final int MASK_CONNECT = 1 << 10; //1024
+    static final int MASK_DISCONNECT = 1 << 11; //2048
+    static final int MASK_CLOSE = 1 << 12; //4096
+    static final int MASK_DEREGISTER = 1 << 13; //8192
+    static final int MASK_READ = 1 << 14; //16384
+    static final int MASK_WRITE = 1 << 15; //32768
+    static final int MASK_FLUSH = 1 << 16; //65536
+
+    /**
+     * 510
+     */
     static final int MASK_ONLY_INBOUND =  MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
             MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
+
+    /**
+     * 511
+     */
     private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_INBOUND;
+
+    /**
+     * 130559
+     */
     static final int MASK_ONLY_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
+    /**
+     * 130560
+     */
     private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_OUTBOUND;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
@@ -93,8 +109,9 @@ final class ChannelHandlerMask {
         try {
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
                 mask |= MASK_ALL_INBOUND;
-
+                // isSkippable的逻辑就是 如果我在Handler中重写了channelRegistered方法 则返回false
                 if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
+                    // Handler没有重写该方法 使用默认实现的话，将mask中这一方法对应的位置0
                     mask &= ~MASK_CHANNEL_REGISTERED;
                 }
                 if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
@@ -118,6 +135,7 @@ final class ChannelHandlerMask {
                 if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
                     mask &= ~MASK_USER_EVENT_TRIGGERED;
                 }
+                // 最终得到的 mask 是重写的所有方法对应位为1的一个int值
             }
 
             if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
@@ -179,6 +197,7 @@ final class ChannelHandlerMask {
                     }
                     return false;
                 }
+                //ChannelInboundHandlerAdapter 和 ChannelOutboundHandlerAdapter 被重写的方法将失去@Skip注解
                 return m != null && m.isAnnotationPresent(Skip.class);
             }
         });

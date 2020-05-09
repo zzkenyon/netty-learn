@@ -23,6 +23,7 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutor executor, String name, ChannelHandler handler) {
+        // 将参数回传到父类，保存Handler的引用
         super(pipeline, executor, name, handler.getClass());
         this.handler = handler;
     }
