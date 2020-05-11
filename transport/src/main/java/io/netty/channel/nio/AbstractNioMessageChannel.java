@@ -36,6 +36,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     boolean inputShutdown;
 
     /**
+     * @param parent  默认为 null
+     * @param ch 为子类创建的 Nio ServerSocket对象
+     * @param readInterestOp 默认是 OP_ACCEPT
      * @see AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)
      */
     protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
@@ -59,6 +62,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
         private final List<Object> readBuf = new ArrayList<Object>();
 
+        /**
+         * 服务端对应的channel的unsafe是 NioMessageUnsafe，那么，新连接处理会进入到它的read方法
+         */
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

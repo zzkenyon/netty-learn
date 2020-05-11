@@ -270,6 +270,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 核心 初始化通道 注册通道
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -279,6 +280,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
+            // 核心 绑定监听端口
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
@@ -305,11 +307,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
+    /**
+     * 三件事：1、new一个channel
+     * 2、init这个channel
+     * 3、将这个channel register到某个对象
+     * @return
+     */
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
-            // 创建channel
+            // 创建channel 使用反射调用默认构造函数的方式 创建传进的channel类型对象
+            // 使用 ReflectiveChannelFactory 进行创建 ，接下来 要看具体传入channel类型的默认构造函数
             channel = channelFactory.newChannel();
+            // 初始化serverChannel
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {

@@ -83,7 +83,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     /**
-     * Create a new instance using the given {@link ServerSocketChannel}.
+     * 默认构造函数 最终调用到这 ，传入创建的nio对象 ServerSocketChannel
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);

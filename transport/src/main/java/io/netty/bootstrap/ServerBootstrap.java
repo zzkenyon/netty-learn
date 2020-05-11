@@ -129,11 +129,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
+        // 设置options
         setChannelOptions(channel, newOptionsArray(), logger);
+        // 设置 attrs
         setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
 
         ChannelPipeline p = channel.pipeline();
 
+        // 设置新接入channel的options和attrs
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
@@ -142,6 +145,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
+        // 加入新连接的处理器
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {
@@ -150,7 +154,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }
-
+                // 向serverChannel的流水线处理器中加入了一个 ServerBootstrapAcceptor，
+                // 从名字上就可以看出来，这是一个接入器，专门接受新请求，把新的请求扔给某个事件循环器
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
