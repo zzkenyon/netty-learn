@@ -63,7 +63,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         private final List<Object> readBuf = new ArrayList<Object>();
 
         /**
-         * 服务端对应的channel的unsafe是 NioMessageUnsafe，那么，新连接处理会进入到它的read方法
+         * 新连接处理会进入到这里的read方法
          */
         @Override
         public void read() {
@@ -78,8 +78,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        // 不断的读取消息，可以猜到读取的是一个个连接SocketChannel对象
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
+                            // 0 表示 无连接
                             break;
                         }
                         if (localRead < 0) {
