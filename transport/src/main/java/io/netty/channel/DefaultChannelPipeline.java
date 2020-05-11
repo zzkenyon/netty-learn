@@ -90,8 +90,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private PendingHandlerCallback pendingHandlerCallbackHead;
 
     /**
-     * Set to {@code true} once the {@link AbstractChannel} is registered.Once set to {@code true} the value will never
-     * change.
+     * Channel被注册时设为 true
+     * 一旦设为 true 永远不能改
      */
     private boolean registered;
 
@@ -208,9 +208,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             //1 检查是否重复添加
             checkMultiplicity(handler);
-            //2 创建节点
+            //2 创建节点 DefaultChannelHandlerContext类型
             newCtx = newContext(group, filterName(name, handler), handler);
-            //3 添加节点
+            //3 添加节点  双向链表操作
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -221,7 +221,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerCallbackLater(newCtx, true);
                 return this;
             }
-
+            // executor = channel().eventLoop()
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
                 callHandlerAddedInEventLoop(newCtx, executor);
@@ -1327,6 +1327,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    /**
+     * 头节点 即实现了 InBound 又实现了 OutBound
+     */
     final class HeadContext extends AbstractChannelHandlerContext
             implements ChannelOutboundHandler, ChannelInboundHandler {
 
@@ -1421,7 +1424,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();
-
+            // channel激活后，注册监听读事件
             readIfIsAutoRead();
         }
 
@@ -1438,6 +1441,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.fireChannelReadComplete();
+            // 一次读取成功之后，再次注册监听读事件
             readIfIsAutoRead();
         }
 

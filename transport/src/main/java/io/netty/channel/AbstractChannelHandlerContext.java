@@ -105,10 +105,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                                   String name, Class<? extends ChannelHandler> handlerClass) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
-        this.executor = executor;
-        this.executionMask = mask(handlerClass);
+        this.executor = executor; // null
+        this.executionMask = mask(handlerClass); // 生成一个掩码 可以快读判断这个Handler重载了哪些方法
         // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
-        ordered = executor == null || executor instanceof OrderedEventExecutor;
+        ordered = executor == null || executor instanceof OrderedEventExecutor; // ture
     }
 
     @Override
@@ -213,8 +213,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     static void invokeChannelActive(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
+            // 若当前线程是处理本channel的线程，直接调用
             next.invokeChannelActive();
         } else {
+            // 否则 在channel线程上提交异步任务
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -232,6 +234,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 invokeExceptionCaught(t);
             }
         } else {
+            // 递归调用 往下传播
             fireChannelActive();
         }
     }
@@ -674,7 +677,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext read() {
-        // 将找到head节点
+        // channel 读取数据 首先调用到的是 tail 的read方法  why?
+        // tail 的 read方法 将从tail开始往前检索，找到实现了read方法的OutBoundHandler，将找到head节点
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_READ);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
@@ -778,6 +782,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     *
+     * @param msg
+     * @param flush  从writeAndFlush调用 该参数为true
+     * @param promise
+     */
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         ObjectUtil.checkNotNull(msg, "msg");
         try {

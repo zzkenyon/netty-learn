@@ -160,7 +160,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         }
                         break;
                     }
-
+                    // Increment the number of messages that have been read for the current read loop.
                     allocHandle.incMessagesRead(1);
                     readPending = false;
                     // 触发事件，将会引发pipeline的读事件传播
