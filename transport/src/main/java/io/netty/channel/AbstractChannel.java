@@ -876,7 +876,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             int size;
             try {
+                //将待写入的对象过滤，把非ByteBuf对象和FileRegion过滤，把所有的非直接内存转换成直接内存DirectBuffer
                 msg = filterOutboundMessage(msg);
+                //估算出需要写入的ByteBuf的size
                 size = pipeline.estimatorHandle().size(msg);
                 if (size < 0) {
                     size = 0;
@@ -886,7 +888,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-
+            //最后，调用 ChannelOutboundBuffer 的addMessage(msg, size, promise) 方法，
+            // 所以，接下来，我们需要重点看一下这个方法干了什么事情
             outboundBuffer.addMessage(msg, size, promise);
         }
 

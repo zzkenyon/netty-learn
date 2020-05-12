@@ -253,6 +253,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // 获取自旋锁迭代次数
         int writeSpinCount = config().getWriteSpinCount();
         do {
             Object msg = in.current();
