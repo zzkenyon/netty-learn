@@ -677,7 +677,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext read() {
-        // channel 读取数据 首先调用到的是 tail 的read方法  why?
+        // channel 读取数据 首先调用到的是 tail 的read方法  why? read是out事件，所以要从tail开始，遵循事件传播方案
         // tail 的 read方法 将从tail开始往前检索，找到实现了read方法的OutBoundHandler，将找到head节点
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_READ);
         EventExecutor executor = next.executor();

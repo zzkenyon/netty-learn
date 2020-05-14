@@ -78,7 +78,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
-                        // 不断的读取消息，可以猜到读取的是一个个连接SocketChannel对象
+                        // 不断的读取消息，可以猜到读取的是一个个SocketChannel对象
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             // 0 表示 无连接
@@ -98,6 +98,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 这里向NioServerSocketChannel 的pipeline中传进ChannelRead事件
+                    // 首先被调用到的是head节点，负责向下传播，不做处理
+                    // 其次是 ServerBootstrapAcceptor
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

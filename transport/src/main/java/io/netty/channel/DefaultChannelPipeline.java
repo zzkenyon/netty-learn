@@ -1423,8 +1423,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
+            // 向下传递事件
             ctx.fireChannelActive();
-            // channel激活后，注册监听读事件
+            // 并读
             readIfIsAutoRead();
         }
 

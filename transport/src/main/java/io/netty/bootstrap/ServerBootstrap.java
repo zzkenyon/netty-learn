@@ -51,6 +51,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+    // 服务端启动类特有 客户端没
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
 
@@ -122,6 +123,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     /**
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
+    // 业务代码中使用 ChannelInitializer<Channel> 作为参数
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
         this.childHandler = ObjectUtil.checkNotNull(childHandler, "childHandler");
         return this;
@@ -224,18 +226,21 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            // NioSocketChannel
             final Channel child = (Channel) msg;
-
+            //向NioSocketChannel的PipeLine中 add ChannelInitializer
             child.pipeline().addLast(childHandler);
 
             setChannelOptions(child, childOptions, logger);
             setAttributes(child, childAttrs);
 
             try {
+                // 异步执行通道注册，监听事件尚未指定，未指定默认监听读就绪
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
+                            // 强制关闭
                             forceClose(child, future.cause());
                         }
                     }

@@ -738,8 +738,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // to a spin loop
 
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                // NioServerSocketChannel 中创建的是NioMessageUnSafe实例
-                // NioSocketChannel 中创建的是NioByteUnSafe实例
+                // 注意：所有通道注册的时候都没有第一时间指定监听事件，而ops==0 时，这里默认是监听读就绪事件
+                // NioServerSocketChannel 中创建的是NioMessageUnSafe实例 ，处理OP_ACCEPT
+                // NioSocketChannel 中创建的是NioByteUnSafe实例 ， 处理 OP_READ
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {
