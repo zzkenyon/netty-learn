@@ -419,7 +419,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         readPending = true;
 
         final int interestOps = selectionKey.interestOps();
-        // interestOps & OP_READ 若果没有监听读就绪事件 do it
+        // 若果没有监听指定的就绪事件 do it server指定的是ACCEPT client指定的是READ
         if ((interestOps & readInterestOp) == 0) {
             selectionKey.interestOps(interestOps | readInterestOp);
         }
