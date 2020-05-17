@@ -145,7 +145,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean close = false;
             try {
                 do {
-                    // 分配一个ByteBuf
+                    // 分配器来分配一个ByteBuf，ByteBuf是netty里面的字节数据载体，后面读取的数据都读到这个对象里面
                     byteBuf = allocHandle.allocate(allocator);
                     // 将数据读取到分配的ByteBuf中去
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));

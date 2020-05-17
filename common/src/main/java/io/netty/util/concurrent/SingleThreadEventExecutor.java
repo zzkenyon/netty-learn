@@ -836,7 +836,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * 向taskQueue中添加任务的时候会启动reactor线程，那么谁来添加task？
+     * 向taskQueue中添加任务的时候会启动reactor线程，那么谁来添加task？ 调用eventLoop().execute(task) 添加任务
      * Pipeline 上的 Handler 执行时添加task，task队列中的任务大部分是请求处理逻辑，占用的是cpu时间
      * 而请求接收和响应发送属于io内容，占用的是io时间
      * 这两部分 都由同一个线程来执行
@@ -1002,7 +1002,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     private void doStartThread() {
         assert thread == null;
-        // executor 默认是ThreadPerTaskExecutor
+        // 创建NioEventLoop时指定executor默认是ThreadPerTaskExecutor
         // ThreadPerTaskExecutor 在每次执行execute 方法的时候都会通过DefaultThreadFactory创建一个FastThreadLocalThread线程，
         // 而这个线程就是netty中的reactor线程实体
         executor.execute(new Runnable() {
