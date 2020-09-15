@@ -444,9 +444,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             try {
                 int strategy;
                 try {
+                    // hasTasks时selectNow，返回就绪数量，否则返回SelectStrategy.SELECT
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
-                    // hasTask 时continue
+                    //
                     case SelectStrategy.CONTINUE:
                         continue;
 
@@ -461,17 +462,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             //NONE 是Integer.maxValue
                             curDeadlineNanos = NONE;
                         }
-                        // 设定原子量
+                        // 设定原子量nextWakeupNanos，记录距离下次唤醒时间，为-1时表示以唤醒状态
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
+                            //如果任务队列中没有可调度任务 执行selector.select(curDeadlineNanos)
                             if (!hasTasks()) {
-                                //如果任务队列中没有可调度任务 执行selector.select(curDeadlineNanos)
                                 strategy = select(curDeadlineNanos);
                             }
                         } finally {
                             // This update is just to help block unnecessary selector wakeups
                             // so use of lazySet is ok (no race condition)
-                            nextWakeupNanos.lazySet(AWAKE);
+                            nextWakeupNanos.lazySet(AWAKE); // nextWakeupNanos设为-1
                         }
                         // fall through
                     default:
@@ -486,11 +487,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
                 // select计数器+1
                 selectCnt++;
-                cancelledKeys = 0;
+                cancelledKeys = 0;  //
                 needsToSelectAgain = false;
                 // io时间所占比例，初始值为50
                 final int ioRatio = this.ioRatio;
-                boolean ranTasks;
+                boolean ranTasks;  // 记录runAllTasks返回值，表示runAllTasks执行时间有没有超出参数指定的时间，是返回true
                 if (ioRatio == 100) {
                     try {
                         if (strategy > 0) {
@@ -499,10 +500,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         }
                     } finally {
                         // io时间占比达到100% 将一直执行runAllTasks 这里的处理属于cpu处理
-                        // Ensure we always run tasks.
+                        // runAllTasks没有指定时间参数，当且仅当最后一个任务被执行之后 返回 true
                         ranTasks = runAllTasks();
                     }
-                } else if (strategy > 0) {
+                } else if (strategy > 0) { // 说明有通道就绪
                     final long ioStartTime = System.nanoTime();
                     try {
                         processSelectedKeys();
@@ -718,10 +719,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             int readyOps = k.readyOps();
             // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
             // the NIO JDK channel implementation may throw a NotYetConnectedException.
-            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {  // 表示监听了连接事件
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
                 int ops = k.interestOps();
+                // 连接就绪是所有就绪选择中最简单的，对它的处理也很简单。
+                // 当客户端调用connect()并注册OP_CONNECT事件后，连接操作就会就绪。
+                // 因此该事件只可能出现在客户端程序
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
 
@@ -810,13 +814,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
-        // Note this is also correct for the nextWakeupNanos == -1 (AWAKE) case
+        // Note this is also correct for the nextWakeupNanos == -1 (AWnextWakeupNanosAKE) case
         return deadlineNanos < nextWakeupNanos.get();
     }
 
     @Override
     protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
         // Note this is also correct for the nextWakeupNanos == -1 (AWAKE) case
+        // 注意，这对于nextWakeupNanos == -1 (AWAKE)情况也是正确的
         return deadlineNanos < nextWakeupNanos.get();
     }
 

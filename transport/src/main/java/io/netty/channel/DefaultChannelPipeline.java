@@ -122,10 +122,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
-    private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
-        //group为null，因此childExecutor(group)也返回null
-        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
-    }
+        private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+            //group为null，因此childExecutor(group)也返回null
+            return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
+        }
 
     private EventExecutor childExecutor(EventExecutorGroup group) {
         if (group == null) {
@@ -915,6 +915,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
+//        head.fireChannelActive();
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }

@@ -235,7 +235,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             setAttributes(child, childAttrs);
 
             try {
-                // 异步执行通道注册，监听事件尚未指定，未指定默认监听读就绪
+                // 异步执行客户端通道注册，监听事件尚未指定，未指定默认监听读就绪
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

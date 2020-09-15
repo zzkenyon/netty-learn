@@ -79,6 +79,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile Thread thread;
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
+    /**
+     * 默认是ThreadPerTaskExecutor，用来创建新线程执行event loop
+     */
     private final Executor executor;
     private volatile boolean interrupted;
 
@@ -368,6 +371,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
      *
      * @return {@code true} if and only if at least one task was run
+     * 当且仅当最后一个任务被执行之后 返回 true
      */
     protected boolean runAllTasks() {
         assert inEventLoop();
@@ -458,6 +462,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     * 返回 执行时间 是否超出 指定的时间
      */
     protected boolean runAllTasks(long timeoutNanos) {
         //从scheduledTaskQueue转移定时任务到taskQueue
@@ -477,8 +482,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
             runTasks ++;
 
-            // Check timeout every 64 tasks because nanoTime() is relatively expensive.
-            // XXX: Hard-coded value - will make it configurable if it is really a problem.
             // 每隔0x3F任务，即每执行完64次任务之后，判断当前时间是否超过本次reactor任务循环的截止时间了，
             // 如果超过，那就break掉，如果没有超过，那就继续执行。
             // 可以看到，netty对性能的优化考虑地相当的周到，假设netty任务队列里面如果有海量小任务，
@@ -845,8 +848,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     private void execute(Runnable task, boolean immediate) {
         //判断当前执行线程是否是成员thread持有的线程对象
+        // 还是主线程，返回false
         boolean inEventLoop = inEventLoop();
-        //将task加入任务队列
+        //将task加入任务队列 taskQueue 中
         addTask(task);
         if (!inEventLoop) {
             //如果线程还未开始执行，启动线程
@@ -1001,14 +1005,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * 最后线程执行主体为NioEventLoop的run方法。
      */
     private void doStartThread() {
-        assert thread == null;
+        assert thread == null;  // 断言保护，此时 thread!=null 会报错
         // executor 默认是ThreadPerTaskExecutor
         // ThreadPerTaskExecutor 在每次执行execute 方法的时候都会通过DefaultThreadFactory创建一个FastThreadLocalThread线程，
         // 而这个线程就是netty中的reactor线程实体
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                //Thread.currentThread()获取到的是executor创建的线程，赋值给thread，此时NioEventLoop持有了reactor线程的引用
+                //Thread.currentThread()获取到的是executor创建的线程，赋值给thread，从此时开始NioEventLoop将一直持有该线程的引用
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();

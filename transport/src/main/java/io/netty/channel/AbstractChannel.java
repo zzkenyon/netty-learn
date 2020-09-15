@@ -468,10 +468,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             AbstractChannel.this.eventLoop = eventLoop;
 
-            if (eventLoop.inEventLoop()) {
+            if (eventLoop.inEventLoop()) { // 刚启动时，这里将返回false，因为是main线程在执行，不是指定的EventLoop中的线程
                 register0(promise);
             } else {
                 try {
+                    // 所以程序会进入这里，向eventLoop中提交一个注册任务 >> 进execute方法看
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
@@ -497,7 +498,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                doRegister();
+                doRegister(); // 注册时未指定事件
                 neverRegistered = false;
                 registered = true;
 

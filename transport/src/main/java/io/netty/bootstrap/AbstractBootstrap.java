@@ -274,14 +274,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     private ChannelFuture doBind(final SocketAddress localAddress) {
         // 核心 初始化通道 注册通道
         final ChannelFuture regFuture = initAndRegister();
-        final Channel channel = regFuture.channel();
+        final Channel channel = regFuture.channel(); // 从ChannelFuture中获取到上一步准备好的channel
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
-        if (regFuture.isDone()) {
+        if (regFuture.isDone()) {  // initAndRegister 已经执行完了
             // At this point we know that the registration was complete and successful.
-            ChannelPromise promise = channel.newPromise();
+            ChannelPromise promise = channel.newPromise();  // DefaultChannelPromise >>
             // 核心 绑定监听端口
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
